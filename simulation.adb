@@ -4,6 +4,7 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Characters.Latin_1; use Ada.Characters.Latin_1;
 with Ada.Integer_Text_IO;
 with Ada.Numerics.Discrete_Random;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 
 procedure Simulation is
@@ -20,11 +21,17 @@ procedure Simulation is
 
 
    --each Producer is assigned a Product that it produces
-   Product_Name: constant array (Producer_Type) of String(1 .. 10)
-     := ("Leg       ", "Countertop", "Seat      ", "Backrest  ", "Plank     ");
-   --Assembly is a collection of products
-   Assembly_Name: constant array (Assembly_Type) of String(1 .. 9)
-     := ("Chair    ", "Table    ", "Drawer   ");
+   Product_Name: constant array (Producer_Type) of Unbounded_String
+   := (To_Unbounded_String("Leg"),
+       To_Unbounded_String("Countertop"),
+       To_Unbounded_String("Seat"),
+       To_Unbounded_String("Backrest"),
+       To_Unbounded_String("Plank"));
+
+Assembly_Name: constant array (Assembly_Type) of Unbounded_String
+   := (To_Unbounded_String("Chair"),
+       To_Unbounded_String("Table"),
+       To_Unbounded_String("Drawer"));
 
 
    ----TASK DECLARATIONS----
@@ -81,12 +88,12 @@ procedure Simulation is
          Producer_Type_Number := Product;
          Production := Production_Time;
       end Start;
-      Put_Line(ESC & "[93m" & "P: Started producer of " & Product_Name(Producer_Type_Number) & ESC & "[0m");
+      Put_Line(ESC & "[93m" & "P: Started producer of " & To_String(Product_Name(Producer_Type_Number)) & ESC & "[0m");
       loop
          Random_Time := Duration(Random_Production.Random(G));
          delay Random_Time;
-         Put_Line(ESC & "[93m" & "P: Produced product " & Product_Name(Producer_Type_Number)
-                  & " number "  & Integer'Image(Product_Number) & ESC & "[0m");
+         Put_Line(ESC & "[93m" & "P: Produced product " & To_String(Product_Name(Producer_Type_Number))
+         & " number " & Integer'Image(Product_Number) & ESC & "[0m");
          -- Accept for storage
          B.Take(Producer_Type_Number, Product_Number);
          Product_Number := Product_Number + 1;
@@ -136,7 +143,7 @@ procedure Simulation is
 
       -- Debug output: what assembly and components the consumer takes
       Put_Line(ESC & "[96m" & "C: " & Consumer_Name(Consumer_Nb) & " takes assembly " &
-               Assembly_Name(Assembly_Type) & " number " & Integer'Image(Assembly_Number) & ESC & "[0m");
+         To_String(Assembly_Name(Assembly_Type)) & " number " & Integer'Image(Assembly_Number) & ESC & "[0m");
 
 
 
@@ -193,9 +200,11 @@ procedure Simulation is
             if Storage(W) > 0 then
                Storage(W) := Storage(W) - 1;
                In_Storage := In_Storage - 1;
-               Put_Line("B: Removed one " & Product_Name(W) & ". Remaining: " & Integer'Image(Storage(W)));
+               Put_Line("B: Removed one " & To_String(Product_Name(W)) & ". Remaining: " & Integer'Image(Storage(W)));
             else
-               Put_Line("B: No " & Product_Name(W) & " in storage to remove.");
+               Put_Line("B: No " & To_String(Product_Name(W)) & " in storage to remove.");
+
+
             end if;
          end loop;
       end Today_Is_Sunday;
@@ -236,7 +245,7 @@ procedure Simulation is
       begin
          for W in Producer_Type loop
             Put_Line("|   Storage contents: " & Integer'Image(Storage(W)) & " "
-                     & Product_Name(W));
+                     & To_String(Product_Name(W)));
          end loop;
          Put_Line("|   Number of products in storage: " & Integer'Image(In_Storage));
 
@@ -251,12 +260,12 @@ procedure Simulation is
          select
             accept Take(Product: in Producer_Type; Number: in Integer) do
                if Can_Accept(Product) then
-                  Put_Line(ESC & "[91m" & "B: Accepted product " & Product_Name(Product) & " number " &
+                  Put_Line(ESC & "[91m" & "B: Accepted product " & To_String(Product_Name(Product)) & " number " &
                              Integer'Image(Number) & ESC & "[0m");
                   Storage(Product) := Storage(Product) + 1;
                   In_Storage := In_Storage + 1;
                else
-                  Put_Line(ESC & "[91m" & "B: Rejected product " & Product_Name(Product) & " number " &
+                  Put_Line(ESC & "[91m" & "B: Rejected product " & To_String(Product_Name(Product)) & " number " &
                              Integer'Image(Number) & ESC & "[0m");
                end if;
 
@@ -266,7 +275,7 @@ procedure Simulation is
 
             accept Deliver(Assembly: in Assembly_Type; Number: out Integer) do
                if Can_Deliver(Assembly) then
-                  Put_Line(ESC & "[91m" & "B: Delivered assembly " & Assembly_Name(Assembly) & " number " &
+                  Put_Line(ESC & "[91m" & "B: Delivered assembly " & To_String(Assembly_Name(Assembly)) & " number " &
                              Integer'Image(Assembly_Number(Assembly)) & ESC & "[0m");
                   for W in Producer_Type loop
                      Storage(W) := Storage(W) - Assembly_Content(Assembly, W);
@@ -275,7 +284,7 @@ procedure Simulation is
                   Number := Assembly_Number(Assembly);
                   Assembly_Number(Assembly) := Assembly_Number(Assembly) + 1;
                else
-                  Put_Line(ESC & "[91m" & "B: Lacking products for assembly " & Assembly_Name(Assembly) &
+                  Put_Line(ESC & "[91m" & "B: Lacking products for assembly " & To_String(Assembly_Name(Assembly)) &
                              ESC & "[0m");
                   Number := 0;
                end if;
