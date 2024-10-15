@@ -70,6 +70,7 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
    ----TASK DEFINITIONS----
 
    --Producer--
+   -- Remake producer how about delay 1 ( so the deliveries would be every day ) the amount is still to be discussed
 
    task body Producer is
       subtype Production_Time_Range is Integer range 1 .. 3;
