@@ -95,6 +95,7 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
          delay Random_Time;
          Put_Line(ESC & "[93m" & "P: Produced product " & To_String(Product_Name(Producer_Type_Number))
          & " number " & Integer'Image(Product_Number) & ESC & "[0m");
+
          -- Accept for storage
          B.Take(Producer_Type_Number, Product_Number);
          Product_Number := Product_Number + 1;
