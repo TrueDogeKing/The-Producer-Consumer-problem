@@ -38,7 +38,8 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
 
    -- Producer produces determined product
    task type Producer is
-      entry Start(Product: in Producer_Type; Production_Time: in Integer);
+      --delay 1.0;
+      entry Start(Product: in Producer_Type; Production_Time: in Integer;quantity: in Integer);
    end Producer;
 
    -- Consumer gets an arbitrary assembly of several products from the buffer
@@ -73,34 +74,57 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
    -- Remake producer how about delay 1 ( so the deliveries would be every day ) the amount is still to be discussed
 
    task body Producer is
-      subtype Production_Time_Range is Integer range 1 .. 3;
-      package Random_Production is new Ada.Numerics.Discrete_Random(Production_Time_Range);
-      --  random number generator
-      G: Random_Production.Generator;
-      Producer_Type_Number: Integer;
-      Product_Number: Integer;
-      Production: Integer;
-      Random_Time: Duration;
-   begin
-      accept Start(Product: in Producer_Type; Production_Time: in Integer) do
-         --  start random number generator
-         Random_Production.Reset(G);
-         Product_Number := 1;
-         Producer_Type_Number := Product;
-         Production := Production_Time;
-      end Start;
-      Put_Line(ESC & "[93m" & "P: Started producer of " & To_String(Product_Name(Producer_Type_Number)) & ESC & "[0m");
-      loop
-         Random_Time := Duration(Random_Production.Random(G));
-         delay Random_Time;
-         Put_Line(ESC & "[93m" & "P: Produced product " & To_String(Product_Name(Producer_Type_Number))
-         & " number " & Integer'Image(Product_Number) & ESC & "[0m");
+   -- Fixed production amounts for each type of product (per "day")
+   subtype Production_Time_Range is Integer range 1 .. 3;
+   package Random_Production is new Ada.Numerics.Discrete_Random(Production_Time_Range);
+   G: Random_Production.Generator;
 
-         -- Accept for storage
+   Producer_Type_Number: Integer;
+   Product_Number: Integer;  -- This tracks the total number of products produced.
+   Production: Integer;
+
+   -- Production amounts (quantities to be produced per day)
+   Production_Amount: Integer;
+begin
+   -- Accept initial start call
+   accept Start(Product: in Producer_Type; Production_Time: in Integer; quantity: in Integer) do
+      Random_Production.Reset(G);
+      Product_Number := quantity;  -- Initial quantity of the product produced
+      Producer_Type_Number := Product;
+      Production := Production_Time;
+   end Start;
+
+   -- Output to indicate the producer started
+   Put_Line(ESC & "[93m" & "P: Started producer of " & To_String(Product_Name(Producer_Type_Number)) & ESC & "[0m");
+
+   -- Loop to simulate daily production and delivery
+   loop
+      -- Determine the production amount based on the product type
+      case Producer_Type_Number is
+         when 1 => Production_Amount := 4;  -- Legs
+         when 2 => Production_Amount := 1;  -- Countertop
+         when 3 => Production_Amount := 1;  -- Seat
+         when 4 => Production_Amount := 1;  -- Backrest
+         when 5 => Production_Amount := 4;  -- Plank
+         when others => Production_Amount := 1;  -- Default case (not strictly needed)
+      end case;
+
+      -- Produce and deliver the specified quantity
+      for I in 1 .. Production_Amount loop
+         Put_Line(ESC & "[93m" & "P: Produced product " & To_String(Product_Name(Producer_Type_Number))
+                  & " number " & Integer'Image(Product_Number) & ESC & "[0m");
+
+         -- Simulate storing the product in the buffer
          B.Take(Producer_Type_Number, Product_Number);
          Product_Number := Product_Number + 1;
       end loop;
-   end Producer;
+
+      -- Simulate one "day" passing (1 second per day)
+      delay 1.0;
+
+   end loop;
+end Producer;
+
 
 
    --Consumer--
@@ -245,11 +269,14 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
 
       procedure Storage_Contents is
       begin
+
+         Put_Line("|=== Storage contents ===|");
          for W in Producer_Type loop
-            Put_Line("|   Storage contents: " & Integer'Image(Storage(W)) & " "
+            Put_Line("|  " & Integer'Image(Storage(W)) & " "
                      & To_String(Product_Name(W)));
          end loop;
          Put_Line("|   Number of products in storage: " & Integer'Image(In_Storage));
+         Put_Line("|========================|");
 
       end Storage_Contents;
 
@@ -258,7 +285,7 @@ Assembly_Name: constant array (Assembly_Type) of Unbounded_String
    Setup_Variables;
 
       loop
-          Storage_Contents;
+         Storage_Contents;
          select
             accept Take(Product: in Producer_Type; Number: in Integer) do
                if Can_Accept(Product) then
@@ -316,7 +343,8 @@ begin
 
    -- Start all Producer tasks
    for I in 1 .. Number_Of_Producers loop
-      P(I).Start(I, 10);
+      Put_Line("P: main function calling. I:" & Integer'Image(I) );
+      P(I).Start(I, 10,2);
    end loop;
 
    -- Start all Consumer tasks
