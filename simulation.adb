@@ -13,6 +13,7 @@ procedure Simulation is
    Number_Of_Producers  : constant Integer := 5;
    Number_Of_Assemblies : constant Integer := 3;
    Number_Of_Consumers  : constant Integer := 2;
+   Deal_Time            : constant Integer := 10;
 
    subtype Producer_Type is Integer range 1 .. Number_Of_Producers;
    subtype Assembly_Type is Integer range 1 .. Number_Of_Assemblies;
@@ -34,15 +35,14 @@ procedure Simulation is
    task type Producer is
       --delay 1.0;
       entry Start
-        (Product  : in Producer_Type; Production_Time : in Integer;
-         quantity : in Integer);
+        (Product  : in Producer_Type; Production_Time : in Integer);
    end Producer;
 
    -- Consumer gets an arbitrary assembly of several products from the buffer
    -- but he/she orders it randomly
    task type Consumer is
       entry Start
-        (Consumer_Number : in Consumer_Type; Consumption_Time : in Integer);
+        (Consumer_Number : in Consumer_Type);
    end Consumer;
 
    task type Calendar is
@@ -89,17 +89,24 @@ procedure Simulation is
    begin
       -- Accept initial start call
       accept Start
-        (Product  : in Producer_Type; Production_Time : in Integer;
-         quantity : in Integer)
+        (Product  : in Producer_Type; Production_Time : in Integer)
       do
          Random_Production.Reset (G);
-         Product_Number       :=
-           quantity;  -- Initial quantity of the product produced
+         Product_Number       := 1;  -- Initial quantity of the product produced
          Producer_Type_Number := Product;
          Production           := Production_Time;
          Last_Rejected        := False;
       end Start;
 
+
+
+      select
+         delay Duration(Production);
+         loop
+            Put_Line (ESC & "[93m" & "P: Deal expired! Stopping producer of " & To_String (Product_Name (Producer_Type_Number)) & ESC & "[0m");
+            delay 1.0;
+         end loop;
+            then abort
       -- Output to indicate the producer started
       Put_Line
         (ESC & "[93m" & "P: Started producer of " &
@@ -148,6 +155,9 @@ procedure Simulation is
          delay 1.0;
 
       end loop;
+   end select;
+
+
    end Producer;
 
    --Consumer--
@@ -165,19 +175,17 @@ procedure Simulation is
       GA              : Random_Assembly.Generator;
       Consumer_Nb     : Consumer_Type;
       Assembly_Number : Integer;
-      Consumption     : Integer;
       Assembly_Type   : Integer;
       Consumer_Name   :
         constant array (1 .. Number_Of_Consumers) of String (1 .. 9) :=
         ("Consumer1", "Consumer2");
    begin
       accept Start
-        (Consumer_Number : in Consumer_Type; Consumption_Time : in Integer)
+        (Consumer_Number : in Consumer_Type)
       do
          Random_Consumption.Reset (G);
          Random_Assembly.Reset (GA);
          Consumer_Nb := Consumer_Number;
-         Consumption := Consumption_Time;
       end Start;
       Put_Line
         (ESC & "[96m" & "C: Started consumer " & Consumer_Name (Consumer_Nb) &
@@ -348,12 +356,28 @@ procedure Simulation is
 
       end Storage_Contents;
 
+
+
+
+
+      -- Start of bufor loop --
+
    begin
       Put_Line (ESC & "[91m" & "B: Buffer started" & ESC & "[0m");
       Setup_Variables;
 
+
+
       loop
+
+
+
          select
+            accept Sunday do
+               Put_Line ("B: It's Sunday. Performing Sunday operation.");
+               Today_Is_Sunday;  -- Perform the Sunday operation to remove one of each product
+            end Sunday;
+            or
             accept Take
               (Product  : in     Producer_Type; Number : in Integer;
                Rejected :    out Boolean)
@@ -402,13 +426,6 @@ procedure Simulation is
 
          or
 
-            accept Sunday do
-               Put_Line ("B: It's Sunday. Performing Sunday operation.");
-               Today_Is_Sunday;  -- Perform the Sunday operation to remove one of each product
-            end Sunday;
-
-         or
-
             accept Print_Storage_Contents do
                Storage_Contents;
             end Print_Storage_Contents;
@@ -425,16 +442,15 @@ begin
    -- Start the Calendar task in the background
    Cal.Start;
 
-   -- Start all Producer tasks
-   for I in 1 .. Number_Of_Producers loop
-      Put_Line ("P: main function calling. I:" & Integer'Image (I));
-      P (I).Start (I, 10, 2);
-   end loop;
 
-   -- Start all Consumer tasks
-   for J in 1 .. Number_Of_Consumers loop
-      K (J).Start (J, 12);
-   end loop;
+   -- Start all Producer tasks
+      for I in 1 .. Number_Of_Producers loop
+         P (I).Start (I, Deal_Time );
+      end loop;
+      -- Start all Consumer tasks
+      for J in 1 .. Number_Of_Consumers loop
+         K (J).Start (J);
+      end loop;
 
    -- The Calendar will continue running in the background,
    -- and producers and consumers will also run concurrently.
