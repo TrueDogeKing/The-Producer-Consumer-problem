@@ -98,65 +98,66 @@ procedure Simulation is
          Last_Rejected        := False;
       end Start;
 
-
+      loop
 
       select
          delay Duration(Production);
-         loop
-            Put_Line (ESC & "[93m" & "P: Deal expired! Stopping producer of " & To_String (Product_Name (Producer_Type_Number)) & ESC & "[0m");
+            Put_Line (ESC & "[35m" & "P: Deal expired! Stopping producer of " & To_String (Product_Name (Producer_Type_Number)) & ESC & "[0m");
+            Put_Line (ESC & "[35m" & "P: making new deal " & ESC & "[0m");
             delay 1.0;
-         end loop;
-            then abort
+            --continue;
+         then abort
+
       -- Output to indicate the producer started
       Put_Line
         (ESC & "[93m" & "P: Started producer of " &
          To_String (Product_Name (Producer_Type_Number)) & ESC & "[0m");
 
       -- Loop to simulate daily production and delivery
-      loop
-         -- Determine the production amount based on the product type
-         case Producer_Type_Number is
-            when 1 =>
-               Production_Amount := 4;  -- Legs
-            when 2 =>
-               Production_Amount := 1;  -- Countertop
-            when 3 =>
-               Production_Amount := 1;  -- Seat
-            when 4 =>
-               Production_Amount := 1;  -- Backrest
-            when 5 =>
-               Production_Amount := 4;  -- Plank
-            when others =>
-               Production_Amount := 1;  -- Default case (not strictly needed)
-         end case;
+         loop
+               -- Determine the production amount based on the product type
+               case Producer_Type_Number is
+               when 1 =>
+                  Production_Amount := 4;  -- Legs
+               when 2 =>
+                  Production_Amount := 1;  -- Countertop
+               when 3 =>
+                  Production_Amount := 1;  -- Seat
+               when 4 =>
+                  Production_Amount := 1;  -- Backrest
+               when 5 =>
+                  Production_Amount := 4;  -- Plank
+               when others =>
+                  Production_Amount := 1;  -- Default case (not strictly needed)
+               end case;
 
-         -- Produce and deliver the specified quantity
-         for I in 1 .. Production_Amount loop
-            Put_Line
-              (ESC & "[93m" & "P: Produced product " &
-               To_String (Product_Name (Producer_Type_Number)) & " number " &
-               Integer'Image (Product_Number) & ESC & "[0m");
+               -- Produce and deliver the specified quantity
+               for I in 1 .. Production_Amount loop
+                  Put_Line
+                    (ESC & "[93m" & "P: Produced product " &
+                       To_String (Product_Name (Producer_Type_Number)) & " number " &
+                       Integer'Image (Product_Number) & ESC & "[0m");
 
-            -- Simulate storing the product in the buffer
-            B.Take (Producer_Type_Number, Product_Number, Last_Rejected);
-            Product_Number := Product_Number + 1;
+                  -- Simulate storing the product in the buffer
+                  B.Take (Producer_Type_Number, Product_Number, Last_Rejected);
+                  Product_Number := Product_Number + 1;
 
-            if Last_Rejected then
-               -- If the product was rejected, stop producing for the day
-               Put_Line
-                 (ESC & "[93m" & "P: Production stopped for " &
-                  To_String (Product_Name (Producer_Type_Number)) & ESC &
-                  "[0m");
-               exit;
-            end if;
+                  if Last_Rejected then
+                     -- If the product was rejected, stop producing for the day
+                     Put_Line
+                       (ESC & "[93m" & "P: Production stopped for " &
+                          To_String (Product_Name (Producer_Type_Number)) & ESC &
+                          "[0m");
+                     exit;
+                  end if;
+               end loop;
+
+               -- Simulate one "day" passing (1 second per day)
+               delay 1.0;
+
          end loop;
-
-         -- Simulate one "day" passing (1 second per day)
-         delay 1.0;
-
+      end select;
       end loop;
-   end select;
-
 
    end Producer;
 
